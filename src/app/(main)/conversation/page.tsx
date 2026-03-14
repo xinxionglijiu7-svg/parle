@@ -8,9 +8,11 @@ import { SCENARIOS } from "@/mastra/scenarios";
 export default function ConversationPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSelect(scenarioId: number) {
     setLoading(true);
+    setError("");
     const token = localStorage.getItem("token");
 
     try {
@@ -23,12 +25,16 @@ export default function ConversationPage() {
         body: JSON.stringify({ scenarioId }),
       });
 
-      if (!res.ok) throw new Error("Failed to create conversation");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Impossible de créer la conversation");
+      }
 
       const conversation = await res.json();
       router.push(`/conversation/${conversation.id}`);
     } catch (err) {
       console.error(err);
+      setError(err instanceof Error ? err.message : "Erreur de connexion au serveur");
       setLoading(false);
     }
   }
@@ -49,6 +55,9 @@ export default function ConversationPage() {
           />
         ))}
       </div>
+      {error && (
+        <p className="mt-4 text-center text-sm text-red-600">{error}</p>
+      )}
       {loading && (
         <div className="mt-6 text-center text-sm text-gray-500">
           Préparation de la conversation...
