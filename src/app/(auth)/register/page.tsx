@@ -41,13 +41,8 @@ export default function RegisterPage() {
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        try {
-          const data = JSON.parse(text);
-          setError(data.error || `Erreur ${res.status}`);
-        } catch {
-          setError(`Erreur ${res.status}: ${text.substring(0, 200)}`);
-        }
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Erreur lors de l'inscription");
         return;
       }
 
@@ -55,8 +50,8 @@ export default function RegisterPage() {
       localStorage.setItem("token", data.token);
       await setTokenCookie(data.token);
       router.push("/conversation");
-    } catch (err) {
-      setError(`Erreur de connexion: ${err instanceof Error ? err.message : String(err)}`);
+    } catch {
+      setError("Erreur de connexion au serveur");
     } finally {
       setLoading(false);
     }

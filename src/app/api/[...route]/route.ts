@@ -6,8 +6,19 @@ import { tts } from "@/server/routes/tts";
 import { feedback } from "@/server/routes/feedback";
 import { vocabulary } from "@/server/routes/vocabulary";
 import { progress } from "@/server/routes/progress";
+import { authRateLimiter, apiRateLimiter } from "@/server/middleware/rateLimit";
 
 const app = new Hono().basePath("/api");
+
+// Global error handler
+app.onError((err, c) => {
+  console.error("Unhandled API error:", err);
+  return c.json({ error: "Une erreur interne est survenue" }, 500);
+});
+
+// Rate limiting
+app.use("/auth/*", authRateLimiter);
+app.use("/*", apiRateLimiter);
 
 // Public routes
 app.route("/auth", auth);

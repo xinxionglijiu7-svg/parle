@@ -14,31 +14,40 @@ function isPublicPath(pathname: string): boolean {
   );
 }
 
+function addSecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public paths and static files
   if (isPublicPath(pathname) || pathname.startsWith("/_next") || pathname.startsWith("/icons")) {
-    return NextResponse.next();
+    return addSecurityHeaders(NextResponse.next());
   }
 
   // For API routes, let Hono middleware handle auth
   if (pathname.startsWith("/api/")) {
-    return NextResponse.next();
+    return addSecurityHeaders(NextResponse.next());
   }
 
   // Check for token in cookie
   const token = request.cookies.get("parle-token")?.value;
 
   if (!token) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return addSecurityHeaders(NextResponse.redirect(new URL("/login", request.url)));
   }
 
   try {
     await jwtVerify(token, JWT_SECRET);
-    return NextResponse.next();
+    return addSecurityHeaders(NextResponse.next());
   } catch {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return addSecurityHeaders(NextResponse.redirect(new URL("/login", request.url)));
   }
 }
 

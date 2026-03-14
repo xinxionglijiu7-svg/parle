@@ -24,67 +24,72 @@ progress.use("/*", async (c, next) => {
 
 // GET /api/progress — aggregated stats
 progress.get("/", async (c) => {
-  const userId = c.get("userId");
+  try {
+    const userId = c.get("userId");
 
-  const [
-    totalConversations,
-    completedConversations,
-    totalVocabulary,
-    recentFeedbacks,
-    recentProgress,
-  ] = await Promise.all([
-    prisma.conversation.count({ where: { userId } }),
-    prisma.conversation.count({ where: { userId, status: "completed" } }),
-    prisma.vocabulary.count({ where: { userId } }),
-    prisma.feedback.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      select: {
-        grammarErrors: true,
-        createdAt: true,
-      },
-    }),
-    prisma.learningProgress.findMany({
-      where: { userId },
-      orderBy: { date: "desc" },
-      take: 30,
-    }),
-  ]);
-
-  // Calculate streak
-  const streak = calculateStreak(recentProgress);
-
-  // Grammar error trend (compare last 5 vs previous 5)
-  const errorCounts = recentFeedbacks.map((f) => f.grammarErrors.length);
-  const trend = calculateTrend(errorCounts);
-
-  // Recent activity: last 5 completed conversations with scenario info
-  const recentActivity = await prisma.conversation.findMany({
-    where: { userId, status: "completed" },
-    orderBy: { completedAt: "desc" },
-    take: 5,
-    select: {
-      id: true,
-      scenarioId: true,
-      completedAt: true,
-      feedback: {
+    const [
+      totalConversations,
+      completedConversations,
+      totalVocabulary,
+      recentFeedbacks,
+      recentProgress,
+    ] = await Promise.all([
+      prisma.conversation.count({ where: { userId } }),
+      prisma.conversation.count({ where: { userId, status: "completed" } }),
+      prisma.vocabulary.count({ where: { userId } }),
+      prisma.feedback.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
         select: {
           grammarErrors: true,
-          vocabularySuggestions: true,
+          createdAt: true,
+        },
+      }),
+      prisma.learningProgress.findMany({
+        where: { userId },
+        orderBy: { date: "desc" },
+        take: 30,
+      }),
+    ]);
+
+    // Calculate streak
+    const streak = calculateStreak(recentProgress);
+
+    // Grammar error trend (compare last 5 vs previous 5)
+    const errorCounts = recentFeedbacks.map((f) => f.grammarErrors.length);
+    const trend = calculateTrend(errorCounts);
+
+    // Recent activity: last 5 completed conversations with scenario info
+    const recentActivity = await prisma.conversation.findMany({
+      where: { userId, status: "completed" },
+      orderBy: { completedAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        scenarioId: true,
+        completedAt: true,
+        feedback: {
+          select: {
+            grammarErrors: true,
+            vocabularySuggestions: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  return c.json({
-    totalConversations,
-    completedConversations,
-    totalVocabulary,
-    streak,
-    grammarTrend: trend,
-    recentActivity,
-  });
+    return c.json({
+      totalConversations,
+      completedConversations,
+      totalVocabulary,
+      streak,
+      grammarTrend: trend,
+      recentActivity,
+    });
+  } catch (error) {
+    console.error("Error fetching progress:", error);
+    return c.json({ error: "Une erreur interne est survenue" }, 500);
+  }
 });
 
 function calculateStreak(

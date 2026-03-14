@@ -38,7 +38,7 @@ auth.post("/register", async (c) => {
     return c.json({ token, user: { id: user.id, username: user.username } }, 201);
   } catch (err) {
     console.error("Register error:", err);
-    return c.json({ error: `Server error: ${err instanceof Error ? err.message : String(err)}` }, 500);
+    return c.json({ error: "Erreur interne du serveur" }, 500);
   }
 });
 

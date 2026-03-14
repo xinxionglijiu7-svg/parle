@@ -24,18 +24,23 @@ feedback.use("/*", async (c, next) => {
 
 // GET /api/feedback/:conversationId — get feedback for a conversation
 feedback.get("/:conversationId", async (c) => {
-  const userId = c.get("userId");
-  const conversationId = c.req.param("conversationId");
+  try {
+    const userId = c.get("userId");
+    const conversationId = c.req.param("conversationId");
 
-  const result = await prisma.feedback.findFirst({
-    where: { conversationId, userId },
-  });
+    const result = await prisma.feedback.findFirst({
+      where: { conversationId, userId },
+    });
 
-  if (!result) {
-    return c.json({ error: "Feedback introuvable" }, 404);
+    if (!result) {
+      return c.json({ error: "Feedback introuvable" }, 404);
+    }
+
+    return c.json(result);
+  } catch (error) {
+    console.error("Error fetching feedback:", error);
+    return c.json({ error: "Une erreur interne est survenue" }, 500);
   }
-
-  return c.json(result);
 });
 
 export { feedback };
