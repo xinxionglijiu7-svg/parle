@@ -1,7 +1,7 @@
 import { Agent } from "@mastra/core/agent";
 
 export const correctionAgent = new Agent({
-  id: "correction-agent",
+  id: "correction_agent",
   name: "Correction Agent",
   model: "anthropic/claude-sonnet-4-5-20250514",
   instructions: `Tu es un professeur de français langue étrangère spécialisé dans la correction et le feedback.

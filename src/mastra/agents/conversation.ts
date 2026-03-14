@@ -1,7 +1,7 @@
 import { Agent } from "@mastra/core/agent";
 
 export const conversationAgent = new Agent({
-  id: "conversation-agent",
+  id: "conversation_agent",
   name: "Conversation Agent",
   model: "anthropic/claude-sonnet-4-5-20250514",
   instructions: `Tu es un ami proche qui habite à Marseille. Tu es poli et bienveillant, mais naturel dans ta façon de parler.

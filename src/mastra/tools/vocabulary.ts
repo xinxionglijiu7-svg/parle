@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 
 export const saveVocabularyTool = createTool({
-  id: "save-vocabulary",
+  id: "save_vocabulary",
   description:
     "Extracts and saves notable vocabulary words from the conversation to the user's vocabulary notebook.",
   inputSchema: z.object({
