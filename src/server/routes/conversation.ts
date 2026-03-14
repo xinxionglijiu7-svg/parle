@@ -85,11 +85,8 @@ conversations.post("/", async (c) => {
   } catch (error) {
     console.error("Error creating conversation:", error);
     const message = error instanceof Error ? error.message : String(error);
-    // Identify common issues for user-facing hints
-    if (message.includes("401") || message.includes("authentication") || message.includes("API key")) {
-      return c.json({ error: "Erreur de configuration API. Vérifiez ANTHROPIC_API_KEY." }, 500);
-    }
-    return c.json({ error: "Une erreur interne est survenue" }, 500);
+    // Temporary: return actual error for debugging
+    return c.json({ error: `Debug: ${message.substring(0, 300)}` }, 500);
   }
 });
 
