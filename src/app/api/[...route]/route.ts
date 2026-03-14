@@ -31,7 +31,15 @@ app.route("/progress", progress);
 app.route("/tts", tts);
 
 // Health check
-app.get("/health", (c) => c.json({ status: "ok" }));
+app.get("/health", (c) => c.json({
+  status: "ok",
+  env: {
+    database: !!process.env.DATABASE_URL,
+    anthropic: !!process.env.ANTHROPIC_API_KEY,
+    tts: !!process.env.GOOGLE_CLOUD_TTS_API_KEY,
+    jwt: !!process.env.JWT_SECRET,
+  },
+}));
 
 export const GET = handle(app);
 export const POST = handle(app);
