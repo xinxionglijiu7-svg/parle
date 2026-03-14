@@ -201,15 +201,17 @@ ai-chat/
 │   │   └── tools/
 │   │       └── vocabulary.ts  # Tool for saving words
 │   └── server/
-│       ├── api/
-│       │   └── [...route]/
-│       │       └── route.ts   # Hono catch-all route
+│       ├── middleware/
+│       │   ├── auth.ts        # Bearer token verification
+│       │   └── rateLimit.ts   # Rate limiting (10/min auth, 60/min API)
 │       └── routes/
 │           ├── auth.ts
 │           ├── conversation.ts
 │           ├── feedback.ts
 │           ├── vocabulary.ts
-│           └── progress.ts
+│           ├── progress.ts
+│           └── tts.ts
+├── Makefile                   # Development commands (make help)
 └── tailwind.config.ts
 ```
 
@@ -236,10 +238,23 @@ ai-chat/
 ## Development Commands
 
 ```bash
+make help            # Show all available commands
+make setup           # First-time setup (install + db push)
+make dev             # Start dev server
+make build           # Production build
+make deploy          # Deploy to Vercel
+make db-push         # Push schema to MongoDB
+make db-studio       # Open Prisma Studio (DB viewer)
+make env-check       # Verify environment variables
+make jwt-secret      # Generate a new JWT secret
+make lint            # Run linter
+make clean           # Clean build artifacts
+```
+
+Or use npm directly:
+```bash
 npm install          # Install dependencies (auto-runs prisma generate via postinstall)
 npm run dev          # Start dev server
-npx prisma generate  # Generate Prisma client
-npx prisma db push   # Push schema to MongoDB
 npm run build        # Production build (prisma generate + next build)
 npm run lint         # Lint
 ```
@@ -272,3 +287,40 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - French for all user-facing strings, English for code (variable names, comments)
 - Component names in PascalCase, utilities in camelCase
 - Prefer named exports over default exports
+
+## Lessons Learned
+
+### Prisma v6/v7 + MongoDB
+- Prisma v7は`@prisma/adapter-mongodb`が存在しないためMongoDBをサポートしない。v6を使用すること
+- `prisma db push`は`.env`ファイルを優先的に読む。`.env.local`と`.env`が両方ある場合は`.env`の値に注意
+
+### Next.js App Router
+- **APIルートは`src/app/api/`配下に配置する必要がある**。`src/server/api/`に置くとローカルでは動くがVercelでは404になる
+- `tsconfig.json`にパスエイリアス(`@/*`)を使う場合、`"baseUrl": "."`を明示的に設定しないとVercel上でモジュール解決に失敗する場合がある
+- Next.js 16ではmiddlewareは非推奨（proxyに移行予定）だが、現時点では動作する
+
+### Mastra AI Framework
+- Agent/ToolのIDにはハイフン(`-`)を使わず、アンダースコア(`_`)のみ使用する。新しいバージョンではバリデーションエラーになる
+- `generate()`メソッドにはメッセージ配列ではなく、文字列プロンプトを渡す
+
+### Vercel Deployment
+- GitHubリポジトリ連携では、pushするたびに自動デプロイされる
+- 環境変数はVercelダッシュボードで設定し、変更後は再デプロイが必要
+- Root Directoryはデフォルト（空欄）のままにすること。`./`を入れると問題が起きる場合がある
+- `package.json`に`"postinstall": "prisma generate"`を設定しておくとVercelビルド時にPrismaクライアントが自動生成される
+
+### MongoDB Atlas
+- 接続文字列のパスワード部分の`<>`はプレースホルダーなので削除する
+- 接続文字列にデータベース名を含める（例: `.mongodb.net/parle?`）。省略すると`empty database name not allowed`エラー
+- Network Accessで`0.0.0.0/0`を許可しないと外部からの接続ができない
+
+### Security
+- APIキーやパスワードをチャットや会話ログに貼り付けた場合は、必ずローテーション（再生成）する
+- APIルートのエラーハンドリングでは内部エラーの詳細をクライアントに返さない（ログのみ）
+- Google Cloud APIキーはHTTPリファラー制限とAPI制限をかける
+
+### General
+- `npm init -y`は`"type": "commonjs"`を設定するが、Next.jsプロジェクトでは`"type": "module"`に変更が必要
+- shadcn/uiの`npx shadcn`は`class-variance-authority`を自動インストールしないので手動で追加する
+- next-pwaはTurbopackと互換性がないため、手動でService Workerを実装する
+- Google Cloud TTSの`Buffer`はVercelで`BodyInit`に直接渡せない。`new Uint8Array()`に変換する
