@@ -4,7 +4,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 export const correctionAgent = new Agent({
   id: "correction_agent",
   name: "Correction Agent",
-  model: anthropic("claude-sonnet-4-6-latest"),
+  model: anthropic("claude-sonnet-4-6"),
   instructions: `Tu es un professeur de français langue étrangère spécialisé dans la correction et le feedback.
 
 ## Ton rôle
