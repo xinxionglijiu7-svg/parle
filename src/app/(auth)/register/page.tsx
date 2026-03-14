@@ -40,18 +40,23 @@ export default function RegisterPage() {
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        setError(data.error || "Erreur lors de l'inscription");
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          setError(data.error || `Erreur ${res.status}`);
+        } catch {
+          setError(`Erreur ${res.status}: ${text.substring(0, 200)}`);
+        }
         return;
       }
 
+      const data = await res.json();
       localStorage.setItem("token", data.token);
       await setTokenCookie(data.token);
       router.push("/conversation");
-    } catch {
-      setError("Erreur de connexion au serveur");
+    } catch (err) {
+      setError(`Erreur de connexion: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
     }
