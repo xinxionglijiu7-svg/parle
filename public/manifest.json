@@ -1,0 +1,25 @@
+{
+  "name": "Parle! - Pratique du français",
+  "short_name": "Parle!",
+  "description": "Chatbot pour pratiquer le français oral",
+  "start_url": "/conversation",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a5f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

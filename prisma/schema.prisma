@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// User
+// ============================================================
+model User {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  username     String   @unique
+  passwordHash String
+  level        String   @default("B1")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  conversations    Conversation[]
+  feedbacks        Feedback[]
+  vocabularies     Vocabulary[]
+  learningProgress LearningProgress[]
+}
+
+// ============================================================
+// Conversation
+// ============================================================
+model Conversation {
+  id          String              @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String              @db.ObjectId
+  scenarioId  Int
+  messages    ConversationMessage[]
+  status      ConversationStatus  @default(active)
+  createdAt   DateTime            @default(now())
+  completedAt DateTime?
+
+  user     User      @relation(fields: [userId], references: [id])
+  feedback Feedback?
+}
+
+type ConversationMessage {
+  role      String
+  content   String
+  timestamp DateTime
+}
+
+enum ConversationStatus {
+  active
+  completed
+}
+
+// ============================================================
+// Feedback
+// ============================================================
+model Feedback {
+  id                    String                 @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId        String                 @unique @db.ObjectId
+  userId                String                 @db.ObjectId
+  grammarErrors         GrammarError[]
+  vocabularySuggestions VocabularySuggestion[]
+  pronunciationNotes    String[]
+  keyPhrases            String[]
+  overallComment        String
+  createdAt             DateTime               @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+}
+
+type GrammarError {
+  original    String
+  correction  String
+  explanation String
+}
+
+type VocabularySuggestion {
+  used      String
+  suggested String
+  context   String
+}
+
+// ============================================================
+// Vocabulary
+// ============================================================
+model Vocabulary {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String    @db.ObjectId
+  word           String
+  translation    String
+  context        String?
+  scenarioId     Int?
+  reviewCount    Int       @default(0)
+  lastReviewedAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, word])
+}
+
+// ============================================================
+// LearningProgress
+// ============================================================
+model LearningProgress {
+  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                 String   @db.ObjectId
+  date                   DateTime
+  conversationsCompleted Int      @default(0)
+  newWordsLearned        Int      @default(0)
+  grammarErrorCount      Int      @default(0)
+  streak                 Int      @default(0)
+  createdAt              DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+}
