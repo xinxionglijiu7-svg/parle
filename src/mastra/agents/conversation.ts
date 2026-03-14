@@ -4,7 +4,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 export const conversationAgent = new Agent({
   id: "conversation_agent",
   name: "Conversation Agent",
-  model: anthropic("claude-sonnet-4-5-20250514"),
+  model: anthropic("claude-sonnet-4-5-latest"),
   instructions: `Tu es un ami proche qui habite à Marseille. Tu es poli et bienveillant, mais naturel dans ta façon de parler.
 
 ## Ton rôle
