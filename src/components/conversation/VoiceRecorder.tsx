@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Mic, MicOff, Send } from "lucide-react";
+import { Mic, MicOff, Pause, Play, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -10,17 +10,21 @@ interface VoiceRecorderProps {
   disabled?: boolean;
 }
 
+type RecordingState = "idle" | "listening" | "paused";
+
 export function VoiceRecorder({ onTranscript, disabled }: VoiceRecorderProps) {
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState("");
+  const [recordingState, setRecordingState] = useState<RecordingState>("idle");
+  const [confirmedText, setConfirmedText] = useState("");
+  const [interimText, setInterimText] = useState("");
   const [isSupported, setIsSupported] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const isListeningRef = useRef(false);
+  const recordingStateRef = useRef<RecordingState>("idle");
 
   // Keep ref in sync with state
   useEffect(() => {
-    isListeningRef.current = isListening;
-  }, [isListening]);
+    recordingStateRef.current = recordingState;
+  }, [recordingState]);
 
   useEffect(() => {
     const SpeechRecognition =
@@ -51,27 +55,33 @@ export function VoiceRecorder({ onTranscript, disabled }: VoiceRecorderProps) {
         }
       }
 
-      setTranscript((prev) => {
-        if (finalTranscript) {
-          return (prev + " " + finalTranscript).trim();
-        }
-        return prev + (interimTranscript ? " " + interimTranscript : "");
-      });
+      if (finalTranscript) {
+        setConfirmedText((prev) => (prev + " " + finalTranscript).trim());
+        setInterimText("");
+      } else {
+        setInterimText(interimTranscript);
+      }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      if (event.error !== "no-speech" && event.error !== "aborted") {
+      if (event.error === "not-allowed") {
+        setError("Accès au microphone refusé. Veuillez autoriser l'accès dans les paramètres.");
+      } else if (event.error === "network") {
+        setError("Erreur réseau. La reconnaissance vocale nécessite une connexion Internet.");
+      } else if (event.error !== "no-speech" && event.error !== "aborted") {
         console.error("Speech recognition error:", event.error);
+        setError("Erreur de reconnaissance vocale.");
       }
-      setIsListening(false);
+      setRecordingState("idle");
     };
 
     recognition.onend = () => {
-      if (isListeningRef.current) {
+      // Auto-restart only when actively listening (not paused or idle)
+      if (recordingStateRef.current === "listening") {
         try {
           recognition.start();
         } catch {
-          setIsListening(false);
+          setRecordingState("idle");
         }
       }
     };
@@ -83,30 +93,62 @@ export function VoiceRecorder({ onTranscript, disabled }: VoiceRecorderProps) {
     };
   }, []);
 
-  const toggleListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (!recognitionRef.current) return;
+    setError(null);
 
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      setTranscript("");
-      recognitionRef.current.start();
-      setIsListening(true);
+    // Request microphone permission explicitly
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Stop tracks immediately — we only needed the permission
+      stream.getTracks().forEach((t) => t.stop());
+    } catch {
+      setError("Accès au microphone refusé. Veuillez autoriser l'accès dans les paramètres.");
+      return;
     }
-  }, [isListening]);
+
+    try {
+      setConfirmedText("");
+      setInterimText("");
+      recognitionRef.current.start();
+      setRecordingState("listening");
+    } catch {
+      setError("Impossible de démarrer la reconnaissance vocale.");
+    }
+  }, []);
+
+  const pauseListening = useCallback(() => {
+    if (!recognitionRef.current) return;
+    recognitionRef.current.stop();
+    setRecordingState("paused");
+    setInterimText("");
+  }, []);
+
+  const resumeListening = useCallback(() => {
+    if (!recognitionRef.current) return;
+    try {
+      recognitionRef.current.start();
+      setRecordingState("listening");
+    } catch {
+      setError("Impossible de reprendre la reconnaissance vocale.");
+    }
+  }, []);
 
   const handleSend = useCallback(() => {
-    if (!transcript.trim()) return;
+    const fullText = (confirmedText + " " + interimText).trim();
+    if (!fullText) return;
 
-    if (recognitionRef.current && isListening) {
+    if (recognitionRef.current && recordingState !== "idle") {
       recognitionRef.current.stop();
-      setIsListening(false);
     }
+    setRecordingState("idle");
 
-    onTranscript(transcript.trim());
-    setTranscript("");
-  }, [transcript, isListening, onTranscript]);
+    onTranscript(fullText);
+    setConfirmedText("");
+    setInterimText("");
+  }, [confirmedText, interimText, recordingState, onTranscript]);
+
+  const displayText = (confirmedText + " " + interimText).trim();
 
   if (!isSupported) {
     return (
@@ -132,36 +174,74 @@ export function VoiceRecorder({ onTranscript, disabled }: VoiceRecorderProps) {
 
   return (
     <div className="space-y-2 px-4 py-3">
-      {transcript && (
+      {error && (
+        <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+          {error}
+        </div>
+      )}
+      {displayText && (
         <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700 min-h-[40px]">
-          {transcript}
+          {confirmedText}
+          {interimText && (
+            <span className="text-gray-400">{confirmedText ? " " : ""}{interimText}</span>
+          )}
         </div>
       )}
       <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant={isListening ? "destructive" : "outline"}
-          size="icon"
-          className={cn("h-12 w-12 rounded-full shrink-0", isListening && "animate-pulse")}
-          onClick={toggleListening}
-          disabled={disabled}
-          aria-label={isListening ? "Arrêter" : "Parler"}
-        >
-          {isListening ? (
-            <MicOff className="h-5 w-5" />
-          ) : (
+        {/* Mic / Resume button */}
+        {recordingState === "idle" && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-12 w-12 rounded-full shrink-0"
+            onClick={startListening}
+            disabled={disabled}
+            aria-label="Parler"
+          >
             <Mic className="h-5 w-5" />
-          )}
-        </Button>
+          </Button>
+        )}
+        {recordingState === "listening" && (
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            className="h-12 w-12 rounded-full shrink-0 animate-pulse"
+            onClick={pauseListening}
+            disabled={disabled}
+            aria-label="Pause"
+          >
+            <Pause className="h-5 w-5" />
+          </Button>
+        )}
+        {recordingState === "paused" && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-12 w-12 rounded-full shrink-0 border-blue-300 text-blue-600"
+            onClick={resumeListening}
+            disabled={disabled}
+            aria-label="Reprendre"
+          >
+            <Play className="h-5 w-5" />
+          </Button>
+        )}
+
         <span className="text-xs text-gray-400 flex-1">
-          {isListening ? "Parlez maintenant..." : "Appuyez pour parler"}
+          {recordingState === "idle" && "Appuyez pour parler"}
+          {recordingState === "listening" && "Parlez maintenant..."}
+          {recordingState === "paused" && "En pause — appuyez pour reprendre"}
         </span>
-        {transcript.trim() && (
+
+        {displayText && (
           <Button
             type="button"
             size="icon"
             className="h-12 w-12 rounded-full shrink-0"
             onClick={handleSend}
+            disabled={disabled}
             aria-label="Envoyer"
           >
             <Send className="h-5 w-5" />
