@@ -93,19 +93,9 @@ export function VoiceRecorder({ onTranscript, disabled }: VoiceRecorderProps) {
     };
   }, []);
 
-  const startListening = useCallback(async () => {
+  const startListening = useCallback(() => {
     if (!recognitionRef.current) return;
     setError(null);
-
-    // Request microphone permission explicitly
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Stop tracks immediately — we only needed the permission
-      stream.getTracks().forEach((t) => t.stop());
-    } catch {
-      setError("Accès au microphone refusé. Veuillez autoriser l'accès dans les paramètres.");
-      return;
-    }
 
     try {
       setConfirmedText("");
