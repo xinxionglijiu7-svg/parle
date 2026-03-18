@@ -302,6 +302,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ### Mastra AI Framework
 - Agent/ToolのIDにはハイフン(`-`)を使わず、アンダースコア(`_`)のみ使用する。新しいバージョンではバリデーションエラーになる
 - `generate()`メソッドにはメッセージ配列ではなく、文字列プロンプトを渡す
+- モデル指定には文字列形式(`"anthropic/claude-sonnet-4-6"`)ではなく、`@ai-sdk/anthropic`の`anthropic()`プロバイダー関数を使用する
+- モデルIDはAnthropic APIで有効な正確な名前を使用すること（例: `anthropic("claude-sonnet-4-6")`）。バージョンサフィックス(`-latest`, `-20250514`等)が無効な場合がある
 
 ### Vercel Deployment
 - GitHubリポジトリ連携では、pushするたびに自動デプロイされる

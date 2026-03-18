@@ -84,9 +84,7 @@ conversations.post("/", async (c) => {
     return c.json(conversation, 201);
   } catch (error) {
     console.error("Error creating conversation:", error);
-    const message = error instanceof Error ? error.message : String(error);
-    // Temporary: return actual error for debugging
-    return c.json({ error: `Debug: ${message.substring(0, 300)}` }, 500);
+    return c.json({ error: "Une erreur interne est survenue" }, 500);
   }
 });
 

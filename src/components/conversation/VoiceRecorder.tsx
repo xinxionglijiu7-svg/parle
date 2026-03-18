@@ -15,6 +15,12 @@ export function VoiceRecorder({ onTranscript, disabled }: VoiceRecorderProps) {
   const [transcript, setTranscript] = useState("");
   const [isSupported, setIsSupported] = useState(true);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const isListeningRef = useRef(false);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
 
   useEffect(() => {
     const SpeechRecognition =
@@ -61,7 +67,7 @@ export function VoiceRecorder({ onTranscript, disabled }: VoiceRecorderProps) {
     };
 
     recognition.onend = () => {
-      if (isListening) {
+      if (isListeningRef.current) {
         try {
           recognition.start();
         } catch {
@@ -75,7 +81,7 @@ export function VoiceRecorder({ onTranscript, disabled }: VoiceRecorderProps) {
     return () => {
       recognition.abort();
     };
-  }, [isListening]);
+  }, []);
 
   const toggleListening = useCallback(() => {
     if (!recognitionRef.current) return;
